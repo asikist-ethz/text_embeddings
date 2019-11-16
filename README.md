@@ -10,6 +10,13 @@ Material regarding the workshop will be continuously uploaded before the worksho
 *Where*: room AFL-H-372, Department of Political Science, Affolternstrasse 56, 8050 Zurich<br/>
 ~~*Registration*: closed~~ 
 
+## R Libraries
+During the workshop you will be asked to participate via reporducing provided code examples. 
+In the second day you will also be requested to provide a self-determined pipeline on a work/corpus of your preferences.
+If you would like spending less time loading the R packages, please check the file below and pre-install the desired R packages:
+https://github.com/asikist-ethz/text_embeddings/blob/master/code/suggested_packages.r
+
+- tidyverse (especially dplyr, purrr, tidyr), quanteda[.corpora], ggplot2 (also plotly) 
 ## Readings
 
 ### In political science 
@@ -148,11 +155,11 @@ https://towardsdatascience.com/understanding-locality-sensitive-hashing-49f6d1f6
 
 ### Code tutorials
 Some code repositories and examples mostly with R and word embeddings:
-- [Text preprocessing](https://quanteda.io/)
-- [LDA](https://www.tidytextmining.com/topicmodeling.html)
 - [LSA](https://quanteda.io/articles/pkgdown/examples/lsa.html)
+- [Bert](https://blogs.rstudio.com/tensorflow/posts/2019-09-30-bert-r/)
+- [LDA](https://www.tidytextmining.com/topicmodeling.html)
+- [Text processing](https://quanteda.io/)
 - [LSH](https://rdrr.io/cran/textreuse/man/lsh.html)
 - [GloVe](http://text2vec.org/vectorization.html)
 - [Word2Vec](https://rdrr.io/github/bmschmidt/wordVectors/)
-- [Bert](https://blogs.rstudio.com/tensorflow/posts/2019-09-30-bert-r/)
 - [Keras](https://keras.rstudio.com/)
