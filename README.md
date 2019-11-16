@@ -91,12 +91,12 @@ The relevant papers below and especially the parts discussing the intuition behi
 #### Recursive and Topological(Tree-like):
 - Gehring, J., Auli, M., Grangier, D., Yarats, D., & Dauphin, Y. N. (2017, August). Convolutional sequence to sequence learning. In Proceedings of the 34th International Conference on Machine Learning-Volume 70 (pp. 1243-1252). JMLR. org.[URL](https://dl.acm.org/citation.cfm?id=3305510)
 - Socher, R., Perelygin, A., Wu, J., Chuang, J., Manning, C. D., Ng, A., & Potts, C. (2013, October). Recursive deep models for semantic compositionality over a sentiment treebank. In Proceedings of the 2013 conference on empirical methods in natural language processing (pp. 1631-1642). [PDF](https://www-nlp.stanford.edu/pubs/SocherEtAl_EMNLP2013.pdf)
-- Dos Santos, C., & Gatti, M. (2014, August). Deep convolutional neural networks for sentiment analysis of short texts. In Proceedings of COLING 2014, the 25th International Conference on Computational Linguistics: Technical Papers (pp. 69-78).[PDF](https://www.aclweb.org/anthology/C14-1008)
-- Lai, S., Xu, L., Liu, K., & Zhao, J. (2015, February). Recurrent convolutional neural networks for text classification. In Twenty-ninth AA[PDF](https://www.aaai.org/ocs/index.php/AAAI/AAAI15/paper/download/9745/9552)
+- Dos Santos, C., & Gatti, M. (2014, August). Deep convolutional neural networks for sentiment analysis of short texts. In Proceedings of COLING 2014, the 25th International Conference on Computational Linguistics: Technical Papers (pp. 69-78). [PDF](https://www.aclweb.org/anthology/C14-1008)
+- Lai, S., Xu, L., Liu, K., & Zhao, J. (2015, February). Recurrent convolutional neural networks for text classification. In Twenty-ninth AA. [PDF](https://www.aaai.org/ocs/index.php/AAAI/AAAI15/paper/download/9745/9552)
 
 #### Attention Based (Graph based):
 - Vaswani, A., Shazeer, N., Parmar, N., Uszkoreit, J., Jones, L., Gomez, A. N., ... & Polosukhin, I. (2017). Attention is all you need. In Advances in neural information processing systems (pp. 5998-6008). [URL](http://papers.nips.cc/paper/7181-attention-is-all-you-need)
-- Devlin, J., Chang, M. W., Lee, K., & Toutanova, K. (2018). Bert: Pre-training of deep bidirectional transformers for language understanding. [PDF](arXiv preprint arXiv:1810.04805.https://arxiv.org/abs/1810.04805)
+- Devlin, J., Chang, M. W., Lee, K., & Toutanova, K. (2018). Bert: Pre-training of deep bidirectional transformers for language understanding. [PDF](arXiv preprint arXiv:1810.04805.pdf)
 
 
 ### Books
@@ -121,24 +121,25 @@ https://www.kdnuggets.com/2017/12/general-approach-preprocessing-text-data.html)
 ](https://natural-language-understanding.fandom.com/wiki/List_of_natural_language_processing_tasks)
 - [Stanford: CS224n: Natural Language Processing with Deep Learning](https://www.youtube.com/playlist?list=PLoROMvodv4rOhcuXMZkNm7j3fVwBBY42z)
 https://towardsdatascience.com/nlp-extracting-the-main-topics-from-your-dataset-using-lda-in-minutes-21486f5aa925
-- [YSDA Natural Language Processing course* on Github:] (https://github.com/yandexdataschool/nlp_course)
+- [YSDA Natural Language Processing course* on Github:](https://github.com/yandexdataschool/nlp_course)
 
 #### Older methods:
-[Bag of Words and Tf-idf Explained](http://datameetsmedia.com/bag-of-words-tf-idf-explained/)
-(LDA) https://towardsdatascience.com/nlp-extracting-the-main-topics-from-your-dataset-using-lda-in-minutes-21486f5aa925
-[Locality Sensitive Hashing - Towards Data Science](
+- [Bag of Words and Tf-idf Explained](http://datameetsmedia.com/bag-of-words-tf-idf-explained/)
+- [LDA](https://towardsdatascience.com/nlp-extracting-the-main-topics-from-your-dataset-using-lda-in-minutes-21486f5aa925)
+- [Locality Sensitive Hashing - Towards Data Science](
 https://towardsdatascience.com/understanding-locality-sensitive-hashing-49f6d1f6134)
 
 #### Word Embeddings:
 - [Introduction to Word Embedding and Word2Vec](https://towardsdatascience.com/introduction-to-word-embedding-and-word2vec-652d0c2060fa)
--[What are word embeddings](https://machinelearningmastery.com/what-are-word-embeddings/)
--[An Intuitive Understanding of Word Embeddings: From Count Vectors to Word2Vec](https://www.analyticsvidhya.com/blog/2017/06/word-embeddings-count-word2veec/)
--[Deep	Learning	for	NLP (without	Magic)](http://citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.400.1058&rep=rep1&type=pdf)
--[The Current Best of Universal Word Embeddings and Sentence Embeddings](https://medium.com/huggingface/universal-word-sentence-embeddings-ce48ddc8fc3a)
--[BERT Explained: State of the art language model for NLP](https://towardsdatascience.com/bert-explained-state-of-the-art-language-model-for-nlp-f8b21a9b6270)
--[Embeddings](https://blogs.rstudio.com/tensorflow/posts/2017-12-22-word-embeddings-with-keras/)
--[The Transformer – Attention is all you need.](https://mchromiak.github.io/articles/2017/Sep/12/Transformer-Attention-is-all-you-need/)
-[Word Embeddings for Sentence Classification](https://towardsdatascience.com/word-embeddings-for-sentence-classification-c8cb664c5029)
+
+- [What are word embeddings](https://machinelearningmastery.com/what-are-word-embeddings/)
+- [An Intuitive Understanding of Word Embeddings: From Count Vectors to Word2Vec](https://www.analyticsvidhya.com/blog/2017/06/word-embeddings-count-word2veec/)
+- [Deep	Learning	for	NLP (without	Magic)](http://citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.400.1058&rep=rep1&type=pdf)
+- [The Current Best of Universal Word Embeddings and Sentence Embeddings](https://medium.com/huggingface/universal-word-sentence-embeddings-ce48ddc8fc3a)
+- [BERT Explained: State of the art language model for NLP](https://towardsdatascience.com/bert-explained-state-of-the-art-language-model-for-nlp-f8b21a9b6270)
+- [Embeddings](https://blogs.rstudio.com/tensorflow/posts/2017-12-22-word-embeddings-with-keras/)
+- [The Transformer – Attention is all you need.](https://mchromiak.github.io/articles/2017/Sep/12/Transformer-Attention-is-all-you-need/)
+- [Word Embeddings for Sentence Classification](https://towardsdatascience.com/word-embeddings-for-sentence-classification-c8cb664c5029)
 
 #### Political Science Related:
 - [Analyzing the Potential of Machine Learning in Political Science](https://medium.com/@mandlahsibanda/analyzing-the-potential-of-machine-learning-in-political-science-f1136dc1d2c)
@@ -149,7 +150,7 @@ https://towardsdatascience.com/understanding-locality-sensitive-hashing-49f6d1f6
 ### Code Tutorials
 Some code repositories and examples mostly with R and word embeddings:
 - [Text preprocessing](https://quanteda.io/)
-- [LDA](https://stat.ethz.ch/R-manual/R-devel/library/MASS/html/lda.html)
+- [LDA](https://www.tidytextmining.com/topicmodeling.html)
 - [LSA](https://quanteda.io/articles/pkgdown/examples/lsa.html)
 - [LSH](https://rdrr.io/cran/textreuse/man/lsh.html)
 - [GloVe](http://text2vec.org/vectorization.html)
