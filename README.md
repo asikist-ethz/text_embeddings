@@ -12,7 +12,7 @@ Material regarding the workshop will be continuously uploaded before the worksho
 
 ## R Libraries
 During the workshop you will be asked to participate via reporducing provided code examples. 
-In the second day you will also be requested to provide a self-determined pipeline on a work/corpus of your preferences.
+In the second day you will also be requested to provide a self-determined pipeline on a work/corpus of your preference.
 If you would like spending less time loading the R packages, please check the file below and pre-install the desired R packages:
 https://github.com/asikist-ethz/text_embeddings/blob/master/code/suggested_packages.r
 
