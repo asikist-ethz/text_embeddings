@@ -132,7 +132,6 @@ https://www.kdnuggets.com/2017/12/general-approach-preprocessing-text-data.html)
 - [List of natural language processing tasks
 ](https://natural-language-understanding.fandom.com/wiki/List_of_natural_language_processing_tasks)
 - [Stanford: CS224n: Natural Language Processing with Deep Learning](https://www.youtube.com/playlist?list=PLoROMvodv4rOhcuXMZkNm7j3fVwBBY42z)
-https://towardsdatascience.com/nlp-extracting-the-main-topics-from-your-dataset-using-lda-in-minutes-21486f5aa925
 - [YSDA Natural Language Processing course* on Github:](https://github.com/yandexdataschool/nlp_course)
 
 #### Older methods:
