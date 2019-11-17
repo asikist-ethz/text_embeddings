@@ -83,6 +83,12 @@ In the workshop, we will focus on attaining a high-level intuition of these diff
 - Zuccon, G., Koopman, B., Bruza, P., & Azzopardi, L. (2015, December). Integrating and evaluating neural word embeddings in information retrieval. In Proceedings of the 20th Australasian document computing symposium (p. 12). ACM. [PDF](https://dl.acm.org/citation.cfm?id=2838936)
 - Arora, S., Liang, Y., & Ma, T. (2016). A simple but tough-to-beat baseline for sentence embeddings.[PDF](https://openreview.net/pdf?id=SyK00v5xx)
 
+#### Distances for clustering and nearest neighborhs:
+Francois, D., Wertz, V., & Verleysen, M. (2007). The concentration of fractional distances. IEEE Transactions on Knowledge and Data Engineering, 19(7), 873-886. [URL](https://ieeexplore.ieee.org/abstract/document/4216305/)
+Lin, J. (1991). Divergence measures based on the Shannon entropy. IEEE Transactions on Information theory, 37(1), 145-151.[URL](https://ieeexplore.ieee.org/abstract/document/61115/)
+Guha, S., Rastogi, R., & Shim, K. (2000). ROCK: A robust clustering algorithm for categorical attributes. Information systems, 25(5), 345-366. [PDF](http://www.facweb.iitkgp.ac.in/~shamik/autumn2012/dwdm/papers/ROCK%20A%20Robust%20Clustering%20Algorithm%20for%20Categorical%20Attributes%20(2000)guha00rock.pdf)
+Gower, J. C. (1971). A general coefficient of similarity and some of its properties. Biometrics, 857-871. [PDF](https://pdfs.semanticscholar.org/668b/f9f3932d29f316d68276958acf62256aaac3.pdf)
+
 ### Advanced readings and state-of-the-art:
 Several of the methods below require a deeper understanding of deep learning.
 Furthermore, although these models are extremely powerful, they require a lot of computational resources and data to be effective.
@@ -104,7 +110,6 @@ The relevant papers below and especially the parts discussing the intuition behi
 #### Attention based (graph based):
 - Vaswani, A., Shazeer, N., Parmar, N., Uszkoreit, J., Jones, L., Gomez, A. N., ... & Polosukhin, I. (2017). Attention is all you need. In Advances in neural information processing systems (pp. 5998-6008). [URL](http://papers.nips.cc/paper/7181-attention-is-all-you-need)
 - Devlin, J., Chang, M. W., Lee, K., & Toutanova, K. (2018). Bert: Pre-training of deep bidirectional transformers for language understanding. [PDF](arXiv preprint arXiv:1810.04805.pdf)
-
 
 ### Books
 
@@ -146,12 +151,21 @@ https://towardsdatascience.com/understanding-locality-sensitive-hashing-49f6d1f6
 - [Embeddings](https://blogs.rstudio.com/tensorflow/posts/2017-12-22-word-embeddings-with-keras/)
 - [The Transformer – Attention is all you need.](https://mchromiak.github.io/articles/2017/Sep/12/Transformer-Attention-is-all-you-need/)
 - [Word Embeddings for Sentence Classification](https://towardsdatascience.com/word-embeddings-for-sentence-classification-c8cb664c5029)
-
+- [Intuitive Understanding of Attention Mechanism in Deep Learning](https://towardsdatascience.com/intuitive-understanding-of-attention-mechanism-in-deep-learning-6c9482aecf4f)
+- [Intuitive Guide to Understanding GloVe Embeddings](https://towardsdatascience.com/light-on-math-ml-intuitive-guide-to-understanding-glove-embeddings-b13b4f19c010)
 #### Political science:
 - [Analyzing the Potential of Machine Learning in Political Science](https://medium.com/@mandlahsibanda/analyzing-the-potential-of-machine-learning-in-political-science-f1136dc1d2c)
 - [Political Dashboard](https://political-dashboard.com/)
 - [Tweet Like Trump](https://towardsdatascience.com/tweet-like-trump-with-a-one2seq-model-cb1461f9d54c)
 - [How Trump Reshaped the Presidency in Over 11,000 Tweets](https://www.nytimes.com/interactive/2019/11/02/us/politics/trump-twitter-presidency.html)
+- [Word2vec Made Easy](https://towardsdatascience.com/word2vec-made-easy-139a31a4b8ae)
+
+### Nice Visualizatons:
+- Collins, C., Viegas, F. B., & Wattenberg, M. (2009, October). Parallel tag clouds to explore and analyze faceted text corpora. In 2009 IEEE Symposium on Visual Analytics Science and Technology (pp. 91-98). IEEE. [PDF](http://citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.225.6224&rep=rep1&type=pdf)
+- [Circular Network Layout](https://www.echartsjs.com/examples/en/editor.html?c=graph-circular-layout)
+- [Cluster Diagram](https://towardsdatascience.com/can-we-please-stop-using-word-clouds-eca2bbda7b9d)
+- Sankey Plots: [Trump tweets](https://datavizblog.com/2017/10/16/sankey-diagram-who-does-president-trump-attach-the-most-on-twitter/), [Swing states history](https://archive.nytimes.com/www.nytimes.com/interactive/2012/10/15/us/politics/swing-history.html)
+- [Lexical Dispersion Plots](https://quanteda.io/articles/pkgdown/examples/plotting.html)
 
 ### Code tutorials
 Some code repositories and examples mostly with R and word embeddings:
