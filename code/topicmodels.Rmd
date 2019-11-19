@@ -1,0 +1,174 @@
+---
+title: '2017 UN General Debate: Topic Modelling'
+author: "Jeniffer V. Scurrel, Thomas Asikis"
+date: "11/18/2019"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+#Introduction
+In this code tutorial we are going to show how topic modelling can be done on political texts using Latent Dirichlet Allocation.
+Since we already showcased how to load data from dataverse or locally, now we are going to use a \texttt{quanteda} corpus from the 2017 UN General Debate.
+The goal of the current study is twofold: (i) determine the topics that were mostly discussed during the debate and (ii) set the foundations for creating and expert dictionary.
+
+# Data loading
+\texttt{quanteda} is a widely used library for natural language processing tasks. 
+It doesn't have a rich collection of corpora as dataverse but it can be used to process local corpora as well.
+First we load the data_corpus_ungd2017 from \texttt{data_corpus_ungd201}.
+```{r loading}
+#devtools::install_github("quanteda/quanteda.corpora")
+library(quanteda.corpora)
+library(quanteda)
+data_corpus_ungd2017
+data_corpus_ungd2017_wd <- data_corpus_ungd2017[1:20,]
+```
+Now we construct a document-feature matrix, i.e. a matrix with each document as row index and the extracted term after preprocessing for each words. 
+Each element of the matrix represents the number of appearances of the preprocessed terms in each document.
+In our current example the words are normalized to lower case and stemmed.
+Punctuation, numbers and english stopwords are removed.
+Finally, we use only single words as the elements of our model.
+```{r dfm_construction}
+toks <- tokens(data_corpus_ungd2017_wd, remove_punct = TRUE)
+toks <- tokens_remove(toks, "\\d+")
+toks <-  tokens_remove(toks, "\\d+\\.\\d+")
+toks <-  tokens_remove(toks, "\\d+\\,\\d+")
+
+ungd2017_dfm <- quanteda::dfm(toks,
+             tolower=TRUE,
+             stem=TRUE,
+             remove_punct = TRUE,
+             # removeNumbers = TRUE, # laptop r version is older and may not support this
+             remove = stopwords("english"),
+             ngrams=1,
+             verbose=TRUE)
+```
+Now it is not possible to load the quanteda matrix in the \texttt{topicmodels} package methods.
+Therefore we convert it to the appropriate object structure. 
+We refer to it as document term matrix (dtm) to distringuish the input for two packages.
+```{r dtm_conversion}
+dtm <- quanteda::convert(ungd2017_dfm, to = "topicmodels")
+```
+
+# LDA Model
+Let's now provide our dta to an lda model.
+
+## Choosing the number of topics
+LDA high-level parameters are pretty straight forward. 
+The most import one is the number of topics. 
+Deciding the number of topics arbitarily may lead to problems, such as having a high number of topics may reduce interpretability.
+The best way to pick which and how many topics need to be used is to check them and pick them manually after running the process for a different number of topics.
+Several evaluation metrics have been developed to determine a good number of topics automatically. 
+Below we do a parameter search for $1,2,..10$ topics.
+We use Gibbs sampling to determine the prior of the LDA, which usually leads to higher performance.
+```{r ldatuning}
+#install.packages("ldatuning")
+library(ldatuning)
+
+result <- FindTopicsNumber(
+  dtm,
+  topics = seq(from = 2, to = 10, by = 1),
+  metrics = c("Griffiths2004", "CaoJuan2009", "Arun2010", "Deveaud2014"),
+  method = "Gibbs",
+  control = list(seed = 77),
+  mc.cores = 4L,
+  verbose = TRUE
+)
+
+knitr::kable(result)
+```
+As literature suggests (you can also check the package vignette), we check the plot below and pick a number of topics that minimizes the criteria proposed by Griffiths et al. and CaoJuan et al.
+At the same time we try to pick the number of topics such as the criteria proposed by Arun et al.and et al. are maximized.
+The selection might not always be clear and we might prefer specific criteria based on our needs.
+In our case a high number of topics (e.g. 9) seems to work for most criteria.
+```{r ltopics_plot}
+FindTopicsNumber_plot(result)
+```
+## Fitting the final LDA
+Now that number of topics is known, we can fit the final LDA model.
+Again, as the model is probabilistic we define a seed so that we get the same results across runs. 
+The more data we have and the more efficient our sampling is, the less the randomness in genreal.
+```{r model_generation}
+library(topicmodels)
+ungd2017_lda <- LDA(dtm, k = 9, control = list(seed = 1234))
+ungd2017_lda
+```
+Now that we have our topics, let's check what words are inside each topic:
+These will be the terms that are assigned the higher $\beta$, also reffered to as "per-topic-per-word probabilities", value per topic, and we would like to plot the top 10.
+```{r topic_terms}
+library(tidytext)
+library(ggplot2)
+library(dplyr)
+ungd2017_topics <- tidy(ungd2017_lda, matrix = "beta")
+ungd2017_top_terms <- ungd2017_topics %>%
+  group_by(topic) %>%
+  top_n(10, beta) %>%
+  ungroup() %>%
+  arrange(topic, -beta) 
+```
+We can use the top terms to plot them in a descending order according to beta:
+```{r top_terms_plot}
+ungd2017_top_terms %>%
+  mutate(term = reorder_within(term, beta, topic)) %>%
+  ggplot(aes(term, beta, fill = factor(topic))) +
+  geom_col(show.legend = FALSE) +
+  facet_wrap(~ topic, scales = "free") +
+  coord_flip() +
+  scale_x_reordered()
+```
+
+Furthermore, we can see that the beta value per term and topic. 
+This could be used as some kind of term representation or embedding.
+Still, there may be more optimal ways to produce LDA based embeddings...
+
+```{r beta_spread}
+library(tidyr)
+
+beta_spread <- ungd2017_topics %>%
+  mutate(topic = paste0("topic", topic)) %>%
+  spread(topic, beta)
+
+whichpart <- function(x, n=30) {
+  nx <- length(x)
+  p <- nx-n
+  xp <- sort(x, partial=p)[p]
+  which(x > xp)
+}
+
+filtered_spread <- beta_spread %>% 
+  dplyr::filter(topic2 > 0.01 | topic8 > 0.01)
+diff <-  log(filtered_spread$topic1/filtered_spread$topic8)
+abs_diff <- abs(diff)
+filtered_spread$difference_1_2 <- diff
+largest_differences_ind <- whichpart(abs_diff, n=10)
+largest_differences <- filtered_spread[largest_differences_ind, c('term', 'topic1', 'topic2', 'difference_1_2')]
+
+#library(plotly)
+# a plotly equivalent
+#p <- plot_ly(x =largest_differences$difference_1_2, y = largest_differences$term, type = 'bar', orientation = 'h')
+#plotly::export(p) 
+
+p <- ggplot(largest_differences[3:8,], aes(y=difference_1_2, x=term))+
+  geom_col()
+p + coord_flip()
+```
+Now we coud also chech the $\gamma$ value, whici refers to "per-document-per-topic probabilities".
+We can use these probabilities and a thershold (assume $\gamma > 0.001$) to derive topic similarities between documents.
+```{r}
+ungd2017_documents <- tidy(ungd2017_lda, matrix = "gamma")
+most_probable_topics <- ungd2017_documents[ungd2017_documents$gamma> 0.001, ]
+knitr::kable(most_probable_topics)
+library(arcdiagram)
+arcdiagram::arcplot(as.matrix(most_probable_topics[, c('from_year', 'to_year')]))
+```
+
+```{r}
+#t1: Burundi particiapted in the negotiations of the UN treaty on the Prohibition of Nucelar Weapons
+# and voted in favour on in July 2017
+
+#2: https://gadebate.un.org/en/72/angola
+
+#3: GASTON ALPHONSO BROWNE, Prime Minister and Minister for Finance and
+#Corporate Governance of Antigua and Barbuda,
+#recalled how on 6 September, his two‑island State was victim to the ferocity of Hurricane Irma.
+```
