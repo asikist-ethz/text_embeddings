@@ -1,0 +1,436 @@
+---
+title: "Doc2Vec"
+author: "Thomas Asikis"
+date: "11/27/2019"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Introduction
+
+In this example we will try to embed sequences of words instead of just words. To do so we will us as representation the word2vec word embeddings created in the previous example.
+
+## Main Libraries
+
+Here are the main libraries that the scripts below rely on:
+```{r libraries}
+library(keras)
+
+library(stringi)
+library(stopwords)
+library(tokenizers)
+library(pbapply)
+library(wordVectors)
+library(magrittr)
+library(data.table)
+library(purrr)
+library(umap)
+library(ggplot2)
+library(Rtsne)
+library(tidyr)
+```
+
+# Data Loading
+First we load the parliamentary corpus by downloading it from:
+<https://dataverse.harvard.edu/dataset.xhtml?persistentId=doi:10.7910/DVN/6MZN76>
+and storing it locally.
+The corpus focuses on parliamentry debates of the Irish parliament.
+We repeat the same preprocessing steps as in the word embedding example, only here we pick a smaller of documents to process, as the models tend to be very expensive.
+In general, processing a lot of documents takes a lot of time in R without optimizations.
+For example 60k documents take an hour to be matched to sequence embeddings.
+
+
+```{r loading, cache=TRUE}
+# source.folder <- setwd(dirname(rstudioapi::getActiveDocumentContext()$path))
+corpus <- data.table::fread("Dail_debates_1919-2013.tab", header = T)
+corpus$date <- as.Date(corpus$date)
+last_goverment_begin_data <- as.Date('2011-03-09')
+corpus <- corpus[corpus$date >= last_goverment_begin_data, ]
+
+# subset to process, indices picked randomly
+corpus <- corpus[100:1100, ]
+corpus$norm_speech <-  stri_trans_general(str = corpus$speech,
+                                          id = "Latin-ASCII")
+# sentence tokenization
+corpus$sentences <-  pblapply(corpus$norm_speech, tokenize_sentences, simplify=TRUE)
+corpus$n.sentences <- sapply(corpus$sentences, length)
+
+# keep all speeches with more than one sentence, 
+# as we plan to train sentence to sentence models
+corpus <- corpus[corpus$n.sentences > 1, ]
+
+```
+
+## Preprocessing
+Now we prepare the sequence embeddings.
+The goal is to match each word of a sentence to each representation from the word2vec model.
+So each sentence would now be a matrix of dimensions $words\_in\_sentence \times embedding\_dimensions$.
+
+### Match word to word embedding
+Since we need to clarify to our model the beginning and end of each sentence, we create 2 special tokens that are matched to unique embeddings.
+If we don't have an embedding for a word we ommit it. 
+This happens because the word was not included in the corpus we trained word2vec.
+Other strategies can also be considered, e.g. assign the word to a random vector, retrain word embeddings etc.
+So first we need to load the word reprentations and prepare a function that matches them to words.
+
+```{r loadvecs, cache=TRUE,results="hide", echo=FALSE}
+word_embedding_size = 50
+word_embeddings = wordVectors::read.vectors("w2v_corpus_text.bin")
+```
+```{r preprocessing, cache=TRUE, echo=FALSE}
+# special tokens 
+begin_token <- '$$begin$$' #we pick some unique character sequence here.
+end_token <- '$$end$$' #we pick some unique character sequence here.
+
+# embeddings for special tokens
+begin_token_emb <- seq(1, 1, length.out=word_embedding_size)
+end_token_emb <- seq(0, 0, length.out=word_embedding_size)
+
+# a function that matches a word to embedding 
+# if it exists in the word embedding vocabulary
+# or returns null otherwise
+get_embedding<-function(word){
+  word_embedding = NULL
+  if(is.na(word))
+    return(word_embedding)
+  if(word==begin_token){
+    return(begin_token_emb)
+  }
+  if(word==end_token){
+    return(end_token_emb)
+  }
+  
+  # this block here tries to get the embedding from the token to embedding matrix
+  tryCatch(expr = {word_embedding = as.vector(word_embeddings[word, ])},
+           warning = function(w) {
+             # for speed we disable prints, but you can use them to get an idea
+             # of what words are missing.
+             #print(paste('did not find word ', word))
+           }, error = function(e) {
+             #print(paste('did not find word', word))
+           }, 
+           finally = function(e) {
+           }) 
+  
+  return(word_embedding)
+}
+```
+
+
+### Match sequence to word embeddings matrix
+Now we prepare a function that takes a word sequence, breaks it into words and then matches each word to each embedding.
+
+```{r sentence_matching, cache=TRUE, echo=FALSE, warning=FALSE, results='hide'}
+max_sequence_length <- 0
+
+embed_sequence<-function(word_sequence){
+  # careful here to use tokenization and preprocessing 
+  # that complies with the word tokenization
+  # of the word2vec model and your research assumptions
+  tokenized_sequence <- tokenize_words(word_sequence, 
+                                       stopwords = stopwords::stopwords("en"),
+                                       lowercase = TRUE, 
+                                       simplify = TRUE)
+  
+  embedded_sequence <- lapply(tokenized_sequence, get_embedding)
+  embedded_sequence <- Filter(Negate(is.null), embedded_sequence)
+  
+  # start embedding
+  # here we know our corpus was not tagged with begin and end sequence tokens
+  # so we directly add their embeddings before and after the sentece embedding matrix
+  embedded_sequence[[1]] <- begin_token_emb
+  #end embedding
+  embedded_sequence[[length(embedded_sequence)+1]] <-end_token_emb
+  # now we bind our sequence to matrix of: number_of_embedded_words X embedding_size
+  embedded_sequence <- as.matrix(do.call(rbind, embedded_sequence))
+  n_rows <- nrow(embedded_sequence)
+  if(n_rows > max_sequence_length){
+    max_sequence_length <<- nrow(embedded_sequence)
+  }
+  return(embedded_sequence)
+  
+}
+
+embed_many_sequences <- function(many_sequences){
+  embedded_sequences <- unname(sapply(many_sequences, embed_sequence, simplify = TRUE))
+  embedded_sequences <- Filter(Negate(is.null), embedded_sequences)
+  
+  if(length(embedded_sequences) > 1){
+    return(embedded_sequences)
+  }
+  return(NULL)
+}
+corpus$sentence_word_embeddings <- pbsapply(corpus$sentences, embed_many_sequences)
+```
+
+# Document Embeddings
+Now we have our data loaded and each sentence is mapped to a collection of vectors.
+Our next goal is to get a single embedding (a vector of $50$ numbers) for each sentence.
+
+## Average Word Embeddings
+Sentence emebeddings can be calculated as aggregations of the word embeddings in each sentece.
+For  a first illustration we showcase the easiest way to do this, e.g. by averaging all the word embeddings in a sentence:
+
+```{r averagesentences, cache=TRUE, echo=FALSE}
+# a function to calculate the sentence embeddings
+# as the average over all the word embeddings in that sentence
+average_over_sentences <-function(sentences_vec){
+  if(!typeof(sentences_vec)=='list'){
+    return(NULL)
+  }
+  senteces_average <- lapply(sentences_vec, colMeans)
+  return(senteces_average)
+}
+
+corpus$sentence_embeddings <- pbsapply(corpus$sentence_word_embeddings, 
+                                       average_over_sentences)
+# e further clear out sentences that did not match to any word embeddings
+corpus <- corpus[sapply((corpus$sentence_embeddings), length) > 1, ]
+```
+Here is how the sentence embedding of the first sentence of the first speech of our corpus looks like:
+```{r sentenceemb}
+corpus$sentence_embeddings[[1]][[1]]
+```
+
+Since we use average we can use projections on the same dimensions of senteces, words and speeches.
+We could even expand the above logic to politicians or parties with some group_by operations
+and then we could use a distance based approach to generate clusters via clustering or nearest neighborhs for network plots.
+
+Now we use the same average logic to extend to speech embeddings, were we average over all the sentence embeddings in a speech.
+
+```{r speechembs, cache=TRUE}
+# function that averages over a list of sentence embeddings
+average_over_speeches <-function(sentences_embs){
+  sentences_embs <- as.matrix(do.call(cbind, sentences_embs))
+  speeches_average <- rowMeans(sentences_embs)
+  return(speeches_average)
+}
+
+corpus$speech_embeddings <- pbsapply(corpus$sentence_embeddings, average_over_speeches, simplify=FALSE)
+```
+A speech embedding looks like:
+```{r examplespeechemb}
+corpus$speech_embeddings[[1]]
+```
+And now let's visualize the speeches as points after a dimensionality reduction.
+Each speech is colored according to the party the speaker belongs to.
+If word embeddings are working as expected and averaging over them has the desired effect, then points that are close in the plots below, are also considered close contextually.
+```{r}
+# Now some visualizations
+# A rich collection of visualization is found at:
+# https://www.analyticsvidhya.com/blog/2017/01/t-sne-implementation-r-python/
+custom.config = umap.defaults
+custom.config$random_state = 123
+
+umap_embs <- umap(do.call(rbind, corpus$speech_embeddings), custom.config)
+umap_coords <- umap_embs$layout
+corpus$speeches_x <- umap_coords[, 1]
+corpus$speeches_y<- umap_coords[, 2]
+ggplot(corpus, aes(x= umap_coords[, 1] , y=umap_coords[, 2], color=party_name)) +
+  geom_point(size=2) +
+  ggtitle("UMAP of speech embeddings") 
+
+corpus_pca <- prcomp(do.call(rbind, corpus$speech_embeddings),center = TRUE)
+ggplot(corpus, aes(x= corpus_pca$x[, 1] , y=corpus_pca$x[, 2], color=party_name)) +
+  geom_point(size=2) +
+  ggtitle("PCA of speech embeddings") 
+
+corpus_tsne <- Rtsne(do.call(rbind, corpus$speech_embeddings), dims = 2, 
+                     perplexity=30, verbose=FALSE, max_iter = 500, check_duplicates = FALSE)
+ggplot(corpus, aes(x=corpus_tsne$Y[,1], y=corpus_tsne$Y[,2], color=party_name)) +
+  geom_point(size=2) +
+  ggtitle("TSNE of speech embeddings") 
+```
+## Sequential Embeddings
+Let's use a more sophisticated model to calculate the sentece embeddings. 
+We now use a sequence to sequence model, that takes a sentence word embedding as input and tries to predice the word embedding of the next matrix.
+This way context also included in a sequential manner and not as a bag of words (as in the average solution).
+The main logic of sequence embeddings relies on the notion that input sentences that yield the same embedding are expected to have similar sentences succeeding them. 
+Therefore, one may assume that the context of preceeding  sentences, which have low distance between theis embeddings, is similar in terms that it leads to same contextual statements after them.
+In general the model looks like:
+![A sequence to sequence model.](seq_emb.png)
+### Preparing the sequential data
+For training the goal is to create a matrix of senteces word embeddings for the sentence we have in the corpus. 
+This matrix will be used to create pair of consecutive sentences, so that the model can predict one sentence based on the previous one.
+To fit all sentences in the same matrix, we have to pad them in the same size.
+This means that we need to find the sentence with most word embeddings in its matrix.
+Then attach zero values word emebddings to each sentence matrix with less elements, untill it has the same number of word embeddings as the max element matrix.
+If in the test set we observer an even bigger sentence, then the model will still work.
+So we don't have to prune the extra words.
+The main goal of padding during training is to allow batch training which improves speed and often generalization.
+
+```{r prepare_sequence_data, cache=TRUE, ,results="hide" }
+# pad sentence matrix
+pad_sentence_word_embeddings<-function(sentence_word_embedding){
+  pad_differences <- max_sequence_length - nrow(sentence_word_embedding)
+  if(pad_differences > 0){
+    pad_matrix <- matrix(0, nrow = pad_differences, ncol =word_embedding_size)
+    # here I use a zero filled matrix for speed, which is the same as adding the end sequence 
+    # embedding many times. Some people differentiate padding (always zeros), with end embeddings (could be any number)!
+    # other people train word embedding models with sequence begin/end tokens.
+    # we should be careful when doing so, because such tokens behave like stop-words (they are very frequent).
+    sentence_word_embedding <- do.call(rbind, list(sentence_word_embedding, pad_matrix))
+  }
+  return(sentence_word_embedding)
+}
+example_pad <- pad_sentence_word_embeddings(corpus$sentence_word_embeddings[[1]][[1]])
+
+# match consecutive sentence pairs and pad each sentence once
+get_sentence_pairs <- function(sentence_word_embs){
+  pairs <- list()
+  prev_embedding <- pad_sentence_word_embeddings(sentence_word_embs[[1]])
+  for(k in 2:(length(sentence_word_embs))){
+    next_embedding <-  pad_sentence_word_embeddings(sentence_word_embs[[k]])
+    first_sentences[[sample_counter]] <<- prev_embedding
+    second_sentences[[sample_counter]] <<- next_embedding
+    prev_embedding <- next_embedding
+    sample_counter <<- sample_counter + 1
+  }
+}
+
+# prepare input and output data
+sample_counter <- 1
+first_sentences <- list()
+second_sentences <- list()
+
+lapply(corpus$sentence_word_embeddings, get_sentence_pairs)
+
+list_to_array<-function(element_list){
+  # since keras works with arrays, here is an implementation that 
+  # converts a list of matrices to a 3-D array. 
+  # For more complex models, you can use more dimensions.
+  # the input of sequential models is 3-D: 
+  # number of examples (batch size) X sequence steps X num_features
+  element_list <-  array(unlist(element_list), dim = c(length(element_list), 
+                                                             nrow(element_list[[1]]), 
+                                                             ncol(element_list[[1]])))
+  return(element_list)
+}
+
+first_sentences <- list_to_array(first_sentences)
+encoder_input_data <- first_sentences
+second_sentences <- list_to_array(second_sentences)
+# predict the next sentence given the prevous sentence and a word at a time
+# so the input to the decoder includes every word except the last one (end token/pad)
+decoder_input_data <- second_sentences[, 1:dim(second_sentences)[2]-1, ]
+# and so the target data are always one word ahead of the decoder input data.
+target_data = second_sentences[, 2:dim(second_sentences)[2], ]
+```
+
+### Creating the model
+To create the model we do the following:
+```{r sequence_model, cache=FALSE, results="hide"}
+# Prepare sequence model
+# since this model outputs 2 states per sentence, 
+# we use half the word embedding size here
+# and concatenate the state vectors in one:
+sequence_embedding_size = 25
+
+# Define an input sequence and process it.
+# here null is the number of words per sentece, 
+# and since it is not fixed, null means dynamic
+encoder_inputs  <- layer_input(shape=list(NULL, word_embedding_size))
+encoder         <- layer_lstm(units=sequence_embedding_size, return_state=TRUE)
+encoder_results <- encoder_inputs %>% encoder
+# We discard `encoder_outputs` and only keep the states.
+# lstm produces 2 states, other sequential models may produce more or less states
+# we may decide to keep all or a subset of the states and we usually concatenate them
+# still, this depends on the model and requires a bit of reading to have an educated guess.
+encoder_states  <- encoder_results[2:3]
+
+## Set up the decoder, using `encoder_states` as initial state.
+decoder_inputs  <- layer_input(shape=list(NULL, word_embedding_size))
+## We set up our decoder to return full output sequences,
+## and to return internal states as well. We don't use the
+## return states in the training model, but we will use them in inference.
+decoder_lstm  <- layer_lstm(units=sequence_embedding_size, return_sequences=TRUE,
+                              return_state=TRUE, stateful=FALSE)
+decoder_results <- decoder_lstm(decoder_inputs, initial_state=encoder_states)
+
+## here we use a linear activation. if we used some kind of binary representation
+## the activation would be softmax, so that the output resembles a probability distribution
+## over words.
+decoder_dense   <- layer_dense(units=word_embedding_size, activation='linear')
+decoder_outputs <- decoder_dense(decoder_results[[1]])
+
+# Define the model that will turn
+# `encoder_input_data` & `decoder_input_data` 
+# into `decoder_target_data`
+model <- keras_model( inputs = list(encoder_inputs, decoder_inputs),
+                      outputs = decoder_outputs )
+
+# Compile model
+model %>% compile(optimizer=optimizer_rmsprop(lr = 0.01, rho = 0.9, epsilon = 0.0001, decay = 0.01) , loss='mse')
+## for classification/binary emebddings: model %>% compile(optimizer='rmsprop', loss='categorical_crossentropy')
+
+## Run model
+model %>% fit( list(encoder_input_data, decoder_input_data), target_data,
+               batch_size=64, # number of sentences to train in per time
+               epochs=3, # total passes over all dataset
+              
+               validation_split=0.2 # a validation set to report error on
+               )
+
+## Save model
+# save_model_hdf5(model,'s2s.h5')
+# save_model_weights_hdf5(model,'s2s-wt.h5')
+```
+Now we just want the first part of the model to encode first sentences and use the embedding.
+As the model is trained we can create a "submodel" from the first part:
+
+``` {r encoder_model}
+encoder_model <-  keras_model(inputs = encoder_inputs, outputs = encoder_states)
+# to save the model
+# save_model_hdf5(model,'encode_model.h5')
+# save_model_weights_hdf5(model,'encode_model-wt.h5')
+```
+Let's now see how an lstm embedded sentece looks like:
+```{r}
+## get the emebedding for a new sentence: 
+new_sentence <- "$$begin$$ I always wanted to spend all the goverment funds for education $$end$$"
+
+#Now we have to apply all preprocessing steps to this sentece
+embedded_new_sentence <- embed_sequence(new_sentence)
+
+# function to get sequential embedding
+lstm_embed_sentence<-function(sentence){
+  embedded_sentence <- embed_sequence(sentence)
+  padded_embedded_sentece <- pad_sentence_word_embeddings(embedded_new_sentence)
+  emb <- encoder_model %>% predict(list_to_array(list(padded_embedded_sentece)))
+  return(unlist(emb))
+}
+
+lstm_embed_sentence(new_sentence)
+```
+
+And now let's look at some UMAP visualizations of sentences per party given the sequential model and the average:
+
+```{r, cache=TRUE}
+extended_corpus <- corpus %>%
+  tidyr::unnest(c('sentences', 'sentence_embeddings'))
+custom.config = umap.defaults
+custom.config$random_state = 123
+##model <- load_model_hdf5('s2s.h5')
+##load_model_weights_hdf5(model,'s2s-wt.h5')
+umap_embs <- umap(do.call(rbind, extended_corpus$sentence_embeddings), custom.config)
+umap_coords <- umap_embs$layout
+ggplot(extended_corpus, aes(x= umap_coords[, 1] , y=umap_coords[, 2], color=party_name)) +
+  geom_point(size=2) +
+  ggtitle("UMAP of average sentence embeddings") 
+
+# lstm embeddings
+
+res <- pbsapply(extended_corpus$sentences, lstm_embed_sentence)
+res<-unname(res)
+res_matrix <- t(as.matrix(res))
+
+umap_embs <- umap(res_matrix, custom.config)
+umap_coords <- umap_embs$layout
+ggplot(extended_corpus, aes(x= umap_coords[, 1] , y=umap_coords[, 2], color=party_name)) +
+  geom_point(size=2) +
+  ggtitle("UMAP of lstm sentence embeddings") 
+
+```
